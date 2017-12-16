@@ -1,10 +1,13 @@
 {
   "dependencies": {
+    "base64url": "^2.0.0",
+    "body-parser": "^1.18.2",
     "ejs": "^2.5.7",
     "express": "^4.16.2",
     "express-session": "^1.15.6",
     "google-auth-library": "^0.12.0",
     "googleapis": "^23.0.0",
-    "socket.io": "^2.0.4"
+    "socket.io": "^2.0.4",
+    "synchronize": "^2.0.0"
   }
 }

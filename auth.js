@@ -12,9 +12,14 @@ var app = express();
 var  request  =  require('request');
 var server = http.createServer(app);
 var io = require('socket.io')(server);
-
+var bodyParser = require('body-parser');
+var sync = require('synchronize');
+var base64 = require('base64url');
 var apiURL = 'https://www.googleapis.com/gmail/v1/users/me';
 
+app.use(bodyParser());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded());
 app.use(Session({
   secret: '7td8ycog48td8yd7tdy8gv97rd73s7rxitxifs7rxgovigx7rdigc8td7tfugsurs8d',
       resave: true,
@@ -49,10 +54,30 @@ app.get("/oauthCallback", function(req, res) {
         client.emit('login', "successful");
         client.on('search', function(data) {
           if (client.id == code) {
-						let messages= getListOfMessages(data);
-            client.emit('tst', messages);
+            sync.fiber(function() {
+              let messages = getListOfMessages(data, tokens);
+              console.log(messages);
+              client.emit('messages', messages);
+            });
           }
-
+        });
+        client.on('getMessage', function(data) {
+          if (client.id == code) {
+            sync.fiber(function() {
+              let message = getMessage(data, tokens);
+              console.log(message.payload.parts);
+              if (message.payload.parts) {
+                console.log(message.payload.parts.length);
+								let toBeSent=''
+								message.payload.parts.forEach(function(part){
+									toBeSent+=part.body.data;
+								});
+								client.emit('message', base64.decode(toBeSent));
+              } else {
+                client.emit('message', base64.decode(message.payload.body.data));
+              }
+            });
+          }
         });
 
 
@@ -73,30 +98,45 @@ app.get("/oauthCallback", function(req, res) {
   });
 });
 
-function getListOfMessages(search,token,cb){
-	token = '?access_token=' + token.access_token;
-	let endpoint = '/messages';
-	request(apiURL + endpoint + token + '&&q="in:anywhere" "thursday"',  function (error,  response,  body)  {
-		let sendBody = '';
-		console.log(body);
-		JSON.parse(body).messages.forEach(function(message) {
-			sendBody += `<a href='/details/${message.id}'>${message.snippet}</a>`
-		});
-		res.send(sendBody);
-	});
+var getListOfMessages = function(search, mtoken, cb) {
+  token = '?access_token=' + mtoken.access_token;
+  let endpoint = '/messages';
+  request(apiURL + endpoint + token + '&&q=' + search + '&&maxResults=10',  function (error,  response,  body)  {
+    sync.fiber(function() {
+      let sendBody = '<ul>';
+      // console.log(body);
+      JSON.parse(body).messages.forEach(function(listMessage) {
+        let message = getMessage(listMessage.id, mtoken);
+        sendBody += `<li><a href='#' onclick="openMessage('${message.id}')">${message.snippet}</a></li>`;
+        // console.log(message.id);
+      });
+      sendBody += '</ul>';
+      cb(null, sendBody);
+    });
+  });
 }
+getListOfMessages = sync(getListOfMessages);
+
+var getMessage = function(messageID, mtoken, cb) {
+  token = '?access_token=' + mtoken.access_token;
+  let endpoint = '/messages/';
+  let url = apiURL + endpoint + messageID + token;
+  request(url,  function (error,  response,  body)  {
+    cb(null, JSON.parse(body));
+  });
+}
+getMessage = sync(getMessage);
 
 app.get("/details/:messageID", function(req, res) {
   var oauth2Client = getOAuthClient();
   if (req.session["tokens"]) {
     let token = req.session["tokens"];
-    oauth2Client.setCredentials = token;
-    token = '?access_token=' + token.access_token;
-    let endpoint = '/messages/';
-    let url = apiURL + endpoint + req.paramas.messageID + token;
-    request(url,  function (error,  response,  body)  {
-      res.send(body);
+    sync.fiber(function() {
+      let message = getMessage(req.params.messageID, token);
+      console.log(message.payload.parts.length);
+      res.send(base64.decode(message.payload.body.data));
     });
+
   } else {
     res.send("Error");
   }

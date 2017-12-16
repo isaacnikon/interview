@@ -10,7 +10,11 @@
   <div class="">
     <p id=text></p>
     <input type="text" id="search" placeholder="Search Something" />
-    <input type="button" onclick="search()">search</input>
+    <input type="button" onclick="search()" value="Search" />
+    </br>
+    <a href="#" id="back" onclick="back()" hidden>Back</a>
+    </br>
+    <iframe id="mail" src="about:blank" width=400 height=400 hidden></iframe>
     <div id="results">
 
     </div>
@@ -22,13 +26,47 @@
     socket.on('login', function(data) {
       document.getElementById('text').innerHTML = data;
     });
-    socket.on('tst', function(data) {
-      document.getElementById('text').innerHTML += data;
+    socket.on('messages', function(data) {
+      document.getElementById('results').innerHTML += data;
+    });
+    socket.on('message', function(data) {
+      document.getElementById('results').hidden = true;
+      document.getElementById('back').hidden = false;
+      var mail = document.getElementById('mail');
+      mail.hidden = false;
+      var iframedoc = mail.document;
+      if (mail.contentDocument)
+        iframedoc = mail.contentDocument;
+      else if (mail.contentWindow)
+        iframedoc = mail.contentWindow.document;
+
+      if (iframedoc) {
+        // Put the content in the iframe
+        iframedoc.open();
+        iframedoc.writeln(data);
+        iframedoc.close();
+      } else {
+        //just in case of browsers that don't support the above 3 properties.
+        alert('Cannot inject dynamic contents into iframe.');
+      }
+
     });
 
     function search() {
       console.log("test");
       socket.emit('search', document.getElementById('search').value);
+      document.getElementById('results').innerHTML = '';
+    }
+
+    function openMessage(messageID) {
+      socket.emit('getMessage', messageID);
+    }
+
+    function back() {
+      document.getElementById('results').hidden = false;
+      document.getElementById('back').hidden = true;
+      var mail = document.getElementById('mail');
+      mail.hidden = true;
     }
 
 
