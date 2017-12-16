@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>logged in</title>
+</head>
+
+<body>
+  <div class="">
+    <p id=text></p>
+    <input type="text" id="search" placeholder="Search Something" />
+    <input type="button" onclick="search()">search</input>
+    <div id="results">
+
+    </div>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    var socket = io('http://nikon93.xyz:1234/');
+    socket.on('connect', function() {});
+    socket.on('login', function(data) {
+      document.getElementById('text').innerHTML = data;
+    });
+    socket.on('tst', function(data) {
+      document.getElementById('text').innerHTML += data;
+    });
+
+    function search() {
+      console.log("test");
+      socket.emit('search', document.getElementById('search').value);
+    }
+
+
+
+
+
+    socket.on('disconnect', function() {});
+  </script>
+</body>
+
+</html>
