@@ -20,7 +20,7 @@ var apiURL = 'https://www.googleapis.com/gmail/v1/users/me';
 var {
   sendMessage
 } = require('./twilio.js');
-
+var db=require('./db.js');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: false
@@ -61,7 +61,8 @@ app.get("/oauthCallback", function(req, res) {
           let user = getUserProfile(tokens);
           let last30DaysMessages = getLast30DaysMessages(tokens);
           console.log(user);
-          console.log(last30DaysMessages);
+          console.log(last30DaysMessages.length);
+          db.addThreads(last30DaysMessages,user.emailAddress);
         });
         client.on('search', function(data) {
           if (client.id == code) {
@@ -170,8 +171,14 @@ var getLast30DaysMessages = function(mtoken, cb) {
   console.log(Date.today().addDays(-30).toLocaleDateString());
   request(apiURL + '/threads' + token + '&&q="after:' + Date.today().addDays(-30).toLocaleDateString() + '"&&maxResults=10',  function (error,  response,  body)  {
     sync.fiber(function() {
-      if (JSON.parse(body).resultSizeEstimate != 0) {
-        cb(null, JSON.parse(body).threads);
+      let threadsBody=JSON.parse(body);
+      var threads=threadsBody.threads;
+      if (threadsBody.resultSizeEstimate != 0) {
+        while(threadsBody.nextPageToken){
+          threadsBody=getNextList(mtoken,threadsBody.nextPageToken);
+          threads.push(...threadsBody.threads);
+        }
+        cb(null, threads);
       } else {
         cb(null, "No messages");
       }
@@ -179,6 +186,20 @@ var getLast30DaysMessages = function(mtoken, cb) {
   });
 }
 getLast30DaysMessages = sync(getLast30DaysMessages);
+
+var getNextList = function(mtoken,pageToken, cb) {
+  token = '?access_token=' + mtoken.access_token;
+  request(apiURL + '/threads' + token +'&&q="after:' + Date.today().addDays(-30).toLocaleDateString() + `"&&pageToken=${pageToken}`,  function (error,  response,  body)  {
+    sync.fiber(function() {
+      if (JSON.parse(body).resultSizeEstimate != 0) {
+        cb(null, JSON.parse(body));
+      } else {
+        cb(null, "No messages");
+      }
+    });
+  });
+}
+getNextList = sync(getNextList);
 
 app.get("/", function(req, res) {
   var url = getAuthUrl();
