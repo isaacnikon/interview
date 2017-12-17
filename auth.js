@@ -16,7 +16,9 @@ var bodyParser = require('body-parser');
 var sync = require('synchronize');
 var base64 = require('base64url');
 var apiURL = 'https://www.googleapis.com/gmail/v1/users/me';
-
+var {
+  sendMessage
+} = require('./twilio.js')
 app.use(bodyParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded());
@@ -68,15 +70,33 @@ app.get("/oauthCallback", function(req, res) {
               console.log(message.payload.parts);
               if (message.payload.parts) {
                 console.log(message.payload.parts.length);
-								let toBeSent=''
-								message.payload.parts.forEach(function(part){
-									toBeSent+=part.body.data;
-								});
-								client.emit('message', base64.decode(toBeSent));
+                let toBeSent = ''
+                message.payload.parts.forEach(function(part) {
+                  toBeSent += part.body.data;
+                });
+                let sub = '';
+                message.payload.headers.forEach(function(header) {
+                  if (header.name == "Subject") {
+                    sub = header.value;
+                  }
+                });
+                client.emit('message', {
+                  'body': base64.decode(toBeSent),
+                  'subject': sub
+                });
               } else {
-                client.emit('message', base64.decode(message.payload.body.data));
+                console.log(message.payload);
+                client.emit('message', {
+                  'body': base64.decode(message.payload.body.data),
+                  "subject": sub
+                });
               }
             });
+          }
+        });
+				client.on('sendSMS', function(data) {
+          if (client.id == code) {
+            sendMessage(data.mobile,data.subject);
           }
         });
 
@@ -127,20 +147,6 @@ var getMessage = function(messageID, mtoken, cb) {
 }
 getMessage = sync(getMessage);
 
-app.get("/details/:messageID", function(req, res) {
-  var oauth2Client = getOAuthClient();
-  if (req.session["tokens"]) {
-    let token = req.session["tokens"];
-    sync.fiber(function() {
-      let message = getMessage(req.params.messageID, token);
-      console.log(message.payload.parts.length);
-      res.send(base64.decode(message.payload.body.data));
-    });
-
-  } else {
-    res.send("Error");
-  }
-});
 app.get("/", function(req, res) {
   var url = getAuthUrl();
   res.send(`

@@ -14,6 +14,9 @@
     </br>
     <a href="#" id="back" onclick="back()" hidden>Back</a>
     </br>
+    <input type="text" id="mobile" placeholder="+91xxxxxxxxxx" hidden/>
+    <input type="button" onclick="sendSMS()" id='sendMessage' value="Send" hidden/>
+    </br>
     <iframe id="mail" src="about:blank" width=400 height=400 hidden></iframe>
     <div id="results">
 
@@ -22,6 +25,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     var socket = io('http://nikon93.xyz:1234/');
+    var sub = '';
     socket.on('connect', function() {});
     socket.on('login', function(data) {
       document.getElementById('text').innerHTML = data;
@@ -30,6 +34,7 @@
       document.getElementById('results').innerHTML += data;
     });
     socket.on('message', function(data) {
+      sub = (data.subject);
       document.getElementById('results').hidden = true;
       document.getElementById('back').hidden = false;
       var mail = document.getElementById('mail');
@@ -43,7 +48,7 @@
       if (iframedoc) {
         // Put the content in the iframe
         iframedoc.open();
-        iframedoc.writeln(data);
+        iframedoc.writeln(data.body);
         iframedoc.close();
       } else {
         //just in case of browsers that don't support the above 3 properties.
@@ -59,14 +64,27 @@
     }
 
     function openMessage(messageID) {
+      document.getElementById('mobile').hidden = false;
+      document.getElementById('sendMessage').hidden = false;
       socket.emit('getMessage', messageID);
     }
 
     function back() {
+      document.getElementById('mobile').hidden = true;
+      document.getElementById('sendMessage').hidden = true;
       document.getElementById('results').hidden = false;
       document.getElementById('back').hidden = true;
       var mail = document.getElementById('mail');
       mail.hidden = true;
+    }
+
+    function sendSMS() {
+      if (sub.length != 0) {
+        socket.emit('sendSMS', {
+          'mobile': document.getElementById('mobile').value,
+          "subject": sub
+        });
+      }
     }
 
 
