@@ -19,9 +19,10 @@ var apiURL = 'https://www.googleapis.com/gmail/v1/users/me';
 var {
   sendMessage
 } = require('./twilio.js')
-app.use(bodyParser());
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded());
+app.use(bodyParser.urlencoded({
+  extended: false
+}));
 app.use(Session({
   secret: '7td8ycog48td8yd7tdy8gv97rd73s7rxitxifs7rxgovigx7rdigc8td7tfugsurs8d',
       resave: true,
@@ -94,9 +95,9 @@ app.get("/oauthCallback", function(req, res) {
             });
           }
         });
-				client.on('sendSMS', function(data) {
+        client.on('sendSMS', function(data) {
           if (client.id == code) {
-            sendMessage(data.mobile,data.subject);
+            sendMessage(data.mobile, data.subject);
           }
         });
 
@@ -119,14 +120,18 @@ var getListOfMessages = function(search, mtoken, cb) {
   request(apiURL + endpoint + token + '&&q=' + search + '&&maxResults=10',  function (error,  response,  body)  {
     sync.fiber(function() {
       let sendBody = '<ul>';
-      // console.log(body);
-      JSON.parse(body).messages.forEach(function(listMessage) {
-        let message = getMessage(listMessage.id, mtoken);
-        sendBody += `<li><a href='#' onclick="openMessage('${message.id}')">${message.snippet}</a></li>`;
-        // console.log(message.id);
-      });
-      sendBody += '</ul>';
-      cb(null, sendBody);
+      console.log(body);
+      if (JSON.parse(body).resultSizeEstimate != 0) {
+        JSON.parse(body).messages.forEach(function(listMessage) {
+          let message = getMessage(listMessage.id, mtoken);
+          sendBody += `<li><a href='#' onclick="openMessage('${message.id}')">${message.snippet}</a></li>`;
+          // console.log(message.id);
+        });
+        sendBody += '</ul>';
+        cb(null, sendBody);
+      }else{
+				cb(null,"No messages")
+			}
     });
   });
 }
