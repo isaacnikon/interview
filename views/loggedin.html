@@ -58,7 +58,6 @@
     });
 
     function search() {
-      console.log("test");
       socket.emit('search', document.getElementById('search').value);
       document.getElementById('results').innerHTML = '';
     }

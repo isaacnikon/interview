@@ -53,12 +53,12 @@ app.get("/oauthCallback", function(req, res) {
       session["tokens"] = tokens;
       io.on('connection', function(client) {
         client.id = code;
-        client.emit('login', "successful");
+        client.emit('login', "Login Successful");
         client.on('search', function(data) {
           if (client.id == code) {
             sync.fiber(function() {
               let messages = getListOfMessages(data, tokens);
-              console.log(messages);
+              // console.log(messages);
               client.emit('messages', messages);
             });
           }
@@ -67,7 +67,7 @@ app.get("/oauthCallback", function(req, res) {
           if (client.id == code) {
             sync.fiber(function() {
               let message = getMessage(data, tokens);
-              console.log(message.payload.parts);
+              // console.log(message.payload.parts);
               if (message.payload.parts) {
                 console.log(message.payload.parts.length);
                 let toBeSent = ''
@@ -85,7 +85,7 @@ app.get("/oauthCallback", function(req, res) {
                   'subject': sub
                 });
               } else {
-                console.log(message.payload);
+                // console.log(message.payload);
                 client.emit('message', {
                   'body': base64.decode(message.payload.body.data),
                   "subject": sub
@@ -102,11 +102,6 @@ app.get("/oauthCallback", function(req, res) {
 
 
 
-
-
-
-
-        client.on('event', function(data) {});
         client.on('disconnect', function() {});
       });
       res.sendFile(__dirname + "/views/loggedin.html");
