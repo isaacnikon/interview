@@ -1,3 +1,4 @@
+require('datejs');
 var http = require('http');
 var express = require('express');
 var Session = require('express-session');
@@ -18,7 +19,8 @@ var base64 = require('base64url');
 var apiURL = 'https://www.googleapis.com/gmail/v1/users/me';
 var {
   sendMessage
-} = require('./twilio.js')
+} = require('./twilio.js');
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: false
@@ -55,6 +57,12 @@ app.get("/oauthCallback", function(req, res) {
       io.on('connection', function(client) {
         client.id = code;
         client.emit('login', "Login Successful");
+        sync.fiber(function() {
+          let user = getUserProfile(tokens);
+          let last30DaysMessages = getLast30DaysMessages(tokens);
+          console.log(user);
+          console.log(last30DaysMessages);
+        });
         client.on('search', function(data) {
           if (client.id == code) {
             sync.fiber(function() {
@@ -129,9 +137,9 @@ var getListOfMessages = function(search, mtoken, cb) {
         });
         sendBody += '</ul>';
         cb(null, sendBody);
-      }else{
-				cb(null,"No messages")
-			}
+      } else {
+        cb(null, "No messages")
+      }
     });
   });
 }
@@ -147,12 +155,37 @@ var getMessage = function(messageID, mtoken, cb) {
 }
 getMessage = sync(getMessage);
 
+var getUserProfile = function(mtoken, cb) {
+  token = '?access_token=' + mtoken.access_token;
+  let endpoint = '/profile';
+  let url = apiURL + endpoint + token;
+  request(url,  function (error,  response,  body)  {
+    cb(null, JSON.parse(body));
+  });
+}
+getUserProfile = sync(getUserProfile);
+
+var getLast30DaysMessages = function(mtoken, cb) {
+  token = '?access_token=' + mtoken.access_token;
+  console.log(Date.today().addDays(-30).toLocaleDateString());
+  request(apiURL + '/threads' + token + '&&q="after:' + Date.today().addDays(-30).toLocaleDateString() + '"&&maxResults=10',  function (error,  response,  body)  {
+    sync.fiber(function() {
+      if (JSON.parse(body).resultSizeEstimate != 0) {
+        cb(null, JSON.parse(body).threads);
+      } else {
+        cb(null, "No messages");
+      }
+    });
+  });
+}
+getLast30DaysMessages = sync(getLast30DaysMessages);
+
 app.get("/", function(req, res) {
   var url = getAuthUrl();
   res.send(`
         <h1>Authentication using google oAuth</h1>
         <a href=${url}>Login</a>
-    `)
+    `);
 });
 var port = 1234;
 server.listen(port);
