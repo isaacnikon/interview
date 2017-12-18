@@ -59,10 +59,12 @@ app.get("/oauthCallback", function(req, res) {
         client.emit('login', "Login Successful");
         sync.fiber(function() {
           let user = getUserProfile(tokens);
+          let last30DaysThreads = getLast30DaysThreads(tokens);
           let last30DaysMessages = getLast30DaysMessages(tokens);
           console.log(user);
-          console.log(last30DaysMessages.length);
-          db.addThreads(last30DaysMessages,user.emailAddress);
+          console.log(last30DaysMessages);
+          db.addThreads(last30DaysThreads,user.emailAddress);
+        		db.addMessages(last30DaysMessages);
         });
         client.on('search', function(data) {
           if (client.id == code) {
@@ -166,7 +168,7 @@ var getUserProfile = function(mtoken, cb) {
 }
 getUserProfile = sync(getUserProfile);
 
-var getLast30DaysMessages = function(mtoken, cb) {
+var getLast30DaysThreads = function(mtoken, cb) {
   token = '?access_token=' + mtoken.access_token;
   console.log(Date.today().addDays(-30).toLocaleDateString());
   request(apiURL + '/threads' + token + '&&q="after:' + Date.today().addDays(-30).toLocaleDateString() + '"&&maxResults=10',  function (error,  response,  body)  {
@@ -175,10 +177,31 @@ var getLast30DaysMessages = function(mtoken, cb) {
       var threads=threadsBody.threads;
       if (threadsBody.resultSizeEstimate != 0) {
         while(threadsBody.nextPageToken){
-          threadsBody=getNextList(mtoken,threadsBody.nextPageToken);
+          threadsBody=getNextList(mtoken,threadsBody.nextPageToken, '/threads' );
           threads.push(...threadsBody.threads);
         }
         cb(null, threads);
+      } else {
+        cb(null, "No Threads");
+      }
+    });
+  });
+}
+getLast30DaysThreads = sync(getLast30DaysThreads);
+
+var getLast30DaysMessages = function(mtoken, cb) {
+  token = '?access_token=' + mtoken.access_token;
+  console.log(Date.today().addDays(-30).toLocaleDateString());
+  request(apiURL + '/messages' + token + '&&q="after:' + Date.today().addDays(-30).toLocaleDateString() + '"&&maxResults=10',  function (error,  response,  body)  {
+    sync.fiber(function() {
+      let messagesBody=JSON.parse(body);
+      var messages=messagesBody.messages;
+      if (messagesBody.resultSizeEstimate != 0) {
+        while(messagesBody.nextPageToken){
+          messagesBody=getNextList(mtoken,messagesBody.nextPageToken,"/messages");
+          messages.push(...messagesBody.messages);
+        }
+        cb(null, messages);
       } else {
         cb(null, "No messages");
       }
@@ -187,9 +210,10 @@ var getLast30DaysMessages = function(mtoken, cb) {
 }
 getLast30DaysMessages = sync(getLast30DaysMessages);
 
-var getNextList = function(mtoken,pageToken, cb) {
+
+var getNextList = function(mtoken,pageToken,endpoint, cb) {
   token = '?access_token=' + mtoken.access_token;
-  request(apiURL + '/threads' + token +'&&q="after:' + Date.today().addDays(-30).toLocaleDateString() + `"&&pageToken=${pageToken}`,  function (error,  response,  body)  {
+  request(apiURL + endpoint + token +'&&q="after:' + Date.today().addDays(-30).toLocaleDateString() + `"&&pageToken=${pageToken}`,  function (error,  response,  body)  {
     sync.fiber(function() {
       if (JSON.parse(body).resultSizeEstimate != 0) {
         cb(null, JSON.parse(body));

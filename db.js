@@ -39,10 +39,10 @@ var addThreads = function(threads, email) {
 module.exports.addThreads = addThreads;
 
 var addMessages = function(messages) {
-  messages.forEach(function(thread) {
-    client.query(`insert into messages(messagesid,threadid) values('${message.id}','${thread.id}')`, function(err, res) {
+  messages.forEach(function(message) {
+    client.query(`insert into messages(messageid,threadid) values('${message.id}','${message.threadId}')`, function(err, res) {
       if (!err) {
-        console.log("Successful messages");
+       // console.log("Successful messages "+message.threadId);
       } else {
         console.log(err);
       }
