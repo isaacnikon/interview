@@ -10,7 +10,7 @@
   <div class="">
     <p id=text></p>
     <input type="text" id="search" placeholder="Search Something" />
-    <input type="button" onclick="search()" value="Search" />
+    <input type="button" onclick="search()" value="Search" id="searchButton" />
     </br>
     <a href="#" id="back" onclick="back()" hidden>Back</a>
     </br>
@@ -63,6 +63,9 @@
     }
 
     function openMessage(messageID) {
+    			document.getElementById('search').hidden = true;
+    			document.getElementById('searchButton').hidden = true;
+    			document.getElementById('results').hidden=true;
       document.getElementById('mobile').hidden = false;
       document.getElementById('sendMessage').hidden = false;
       socket.emit('getMessage', messageID);
@@ -70,8 +73,10 @@
 
     function back() {
       document.getElementById('mobile').hidden = true;
+      document.getElementById('searchButton').hidden = false;
       document.getElementById('sendMessage').hidden = true;
       document.getElementById('results').hidden = false;
+      document.getElementById('search').hidden = false;
       document.getElementById('back').hidden = true;
       var mail = document.getElementById('mail');
       mail.hidden = true;
