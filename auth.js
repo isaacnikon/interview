@@ -61,8 +61,8 @@ app.get("/oauthCallback", function(req, res) {
           let user = getUserProfile(tokens);
           let last30DaysThreads = getLast30DaysThreads(tokens);
           let last30DaysMessages = getLast30DaysMessages(tokens);
-          console.log(user);
-          console.log(last30DaysMessages);
+          //console.log(user);
+         // console.log(last30DaysMessages);
           db.addThreads(last30DaysThreads,user.emailAddress);
         		db.addMessages(last30DaysMessages);
         });
@@ -81,7 +81,7 @@ app.get("/oauthCallback", function(req, res) {
               let message = getMessage(data, tokens);
               // console.log(message.payload.parts);
               if (message.payload.parts) {
-                console.log(message.payload.parts.length);
+               // console.log(message.payload.parts.length);
                 let toBeSent = ''
                 message.payload.parts.forEach(function(part) {
                   toBeSent += part.body.data;
@@ -97,6 +97,12 @@ app.get("/oauthCallback", function(req, res) {
                   'subject': sub
                 });
               } else {
+              			let sub = '';
+                message.payload.headers.forEach(function(header) {
+                  if (header.name == "Subject") {
+                    sub = header.value;
+                  }
+                });
                 // console.log(message.payload);
                 client.emit('message', {
                   'body': base64.decode(message.payload.body.data),
@@ -131,7 +137,7 @@ var getListOfMessages = function(search, mtoken, cb) {
   request(apiURL + endpoint + token + '&&q=' + search + '&&maxResults=10',  function (error,  response,  body)  {
     sync.fiber(function() {
       let sendBody = '<ul>';
-      console.log(body);
+      //console.log(body);
       if (JSON.parse(body).resultSizeEstimate != 0) {
         JSON.parse(body).messages.forEach(function(listMessage) {
           let message = getMessage(listMessage.id, mtoken);
@@ -170,7 +176,7 @@ getUserProfile = sync(getUserProfile);
 
 var getLast30DaysThreads = function(mtoken, cb) {
   token = '?access_token=' + mtoken.access_token;
-  console.log(Date.today().addDays(-30).toLocaleDateString());
+  //console.log(Date.today().addDays(-30).toLocaleDateString());
   request(apiURL + '/threads' + token + '&&q="after:' + Date.today().addDays(-30).toLocaleDateString() + '"&&maxResults=10',  function (error,  response,  body)  {
     sync.fiber(function() {
       let threadsBody=JSON.parse(body);
@@ -191,7 +197,7 @@ getLast30DaysThreads = sync(getLast30DaysThreads);
 
 var getLast30DaysMessages = function(mtoken, cb) {
   token = '?access_token=' + mtoken.access_token;
-  console.log(Date.today().addDays(-30).toLocaleDateString());
+  //console.log(Date.today().addDays(-30).toLocaleDateString());
   request(apiURL + '/messages' + token + '&&q="after:' + Date.today().addDays(-30).toLocaleDateString() + '"&&maxResults=10',  function (error,  response,  body)  {
     sync.fiber(function() {
       let messagesBody=JSON.parse(body);
