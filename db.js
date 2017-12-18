@@ -26,7 +26,7 @@ var addThreads = function(threads, email) {
       console.log(err);
     }
   });
-  if(threads.length!=0){
+  if(threads){
   threads.forEach(function(thread) {
     client.query(`insert into threads(email,threadid) values('${email}','${thread.id}')`, function(err, res) {
       if (!err) {
@@ -41,7 +41,7 @@ var addThreads = function(threads, email) {
 module.exports.addThreads = addThreads;
 
 var addMessages = function(messages) {
-	if(messages.length!=0){
+	if(messages){
   messages.forEach(function(message) {
     client.query(`insert into messages(messageid,threadid) values('${message.id}','${message.threadId}')`, function(err, res) {
       if (!err) {
